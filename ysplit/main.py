@@ -11,8 +11,7 @@ import argparse
 import re
 import urllib.parse
 import urllib.request
-import yaml
-import subprocess
+import ruamel.yaml
 
 
 def yaml_url_regex_type(url_arg):
@@ -22,29 +21,30 @@ def yaml_url_regex_type(url_arg):
     """
 
     pat = re.compile(r"https?:\/\/.*\.yaml$")
-    #subprocess.run()
     if not pat.match(url_arg):
         raise argparse.ArgumentTypeError
     return url_arg
 
 
-def read_input_file(input_file):
+def read_input_file(input_file, yaml):
     """
     :param input_file: string, path to valid yaml file
+    :param yaml: ruamel.yaml instance
     :return: list of dicts, each dict a valid subset of input yaml file
     """
 
     print(f"Reading input file: {input_file}")
     with open(os.path.expanduser(input_file), "r") as stream:
         try:
-            return [doc for doc in yaml.safe_load_all(stream)]
-        except yaml.YAMLError as e:
+            return [doc for doc in yaml.load_all(stream)]
+        except Exception as e:
             print(e)
 
 
-def read_remote_url_file(remote_url):
+def read_remote_url_file(remote_url, yaml):
     """
     :param remote_url: string, url containing remote yaml file
+    :param yaml: ruamel.yaml instance
     :return: list of dicts, each dict a valid subset of remote yaml file
     """
 
@@ -57,17 +57,17 @@ def read_remote_url_file(remote_url):
     resp = urllib.request.urlopen(remote_url)
     decoded_data = resp.read().decode("utf-8")
     try:
-        # TODO: maintain block scalar formatting
-        return [doc for doc in yaml.safe_load_all(decoded_data)]
-    except yaml.YAMLError as e:
+        return [doc for doc in yaml.load_all(decoded_data)]
+    except Exception as e:
         print(e)
 
 
-def write_yaml(output_dir, yamldoc_list, project_name):
+def write_yaml(output_dir, yamldoc_list, project_name, yaml):
     """
     :param output_dir: string, path to write files to
     :param yamldoc_list: list of dicts containing yaml content
     :param project_name: string, name of k8s app project
+    :param yaml: ruamel.yaml instance
     :return: files containing content of yamldoc_list
     """
 
@@ -129,6 +129,7 @@ def main():
     args = parser.parse_args()
     output_dir = args.output_dir
 
+    yaml = ruamel.yaml.YAML()
     if args.project_name is not None:
         project_name = f"{args.project_name}-"
     else:
@@ -136,12 +137,12 @@ def main():
 
     if args.input_file is not None:
         input_file = args.input_file.name
-        yamldoc_list = read_input_file(input_file)
+        yamldoc_list = read_input_file(input_file, yaml)
     else:
         remote_url = args.remote_url
-        yamldoc_list = read_remote_url_file(remote_url)
+        yamldoc_list = read_remote_url_file(remote_url, yaml)
 
-    write_yaml(output_dir, yamldoc_list, project_name)
+    write_yaml(output_dir, yamldoc_list, project_name, yaml)
 
 
 if __name__ == "__main__":
