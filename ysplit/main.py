@@ -130,6 +130,7 @@ def main():
     output_dir = args.output_dir
 
     yaml = ruamel.yaml.YAML()
+    yaml.allow_duplicate_keys = True
     if args.project_name is not None:
         project_name = f"{args.project_name}-"
     else:
